@@ -1,60 +1,73 @@
-import { BaseCardBuilder, RankCardBuilder, InfoCardBuilder } from 'discord-card-canvas';
+import { BaseCardBuilder, RankCardBuilder, InfoCardBuilder, WelcomeBuilder, LeaveBuilder } from 'discord-card-canvas';
 
 export default async function handler(req, res) {
   try {
-    const { type = "rank" } = req.query; // kart tipi: rank, base, info
-
+    const { type = "rank" } = req.query;
     let buffer;
 
-    if (type === "rank") {
-      const username = req.query.username || "Anonymous";
-      const level = parseInt(req.query.level) || 1;
-      const rank = parseInt(req.query.rank) || 1;
-      const currentXP = parseInt(req.query.currentXP) || 0;
-      const requiredXP = parseInt(req.query.requiredXP) || 100;
-      const status = req.query.status || "online";
-      const avatarURL = req.query.avatarImgURL || "https://i.pravatar.cc/150";
+    switch(type.toLowerCase()) {
+      case "rank": {
+        const card = new RankCardBuilder({
+          nicknameText: { content: req.query.username || "Anonymous" },
+          currentLvl: parseInt(req.query.level) || 1,
+          currentRank: parseInt(req.query.rank) || 1,
+          currentXP: parseInt(req.query.currentXP) || 0,
+          requiredXP: parseInt(req.query.requiredXP) || 100,
+          userStatus: req.query.status || "online",
+          avatarImgURL: req.query.avatarImgURL || "https://i.pravatar.cc/150",
+          backgroundColor: req.query.backgroundColor || "#0CA7FF",
+          fontDefault: req.query.font || "Nunito",
+          progressBarColor: req.query.progressBarColor || "#0CA7FF"
+        });
+        buffer = await card.build();
+        break;
+      }
 
-      const card = new RankCardBuilder()
-        .setNickname(username)
-        .setCurrentLvl(level)
-        .setCurrentRank(rank)
-        .setCurrentXP(currentXP)
-        .setRequiredXP(requiredXP)
-        .setUserStatus(status)
-        .setBackgroundColor('#0CA7FF')
-        .setAvatarImgURL(avatarURL)
-        .setProgressBarColor('#ffffff');
+      case "base": {
+        const card = new BaseCardBuilder()
+          .setMainText(req.query.mainText || "Welcome")
+          .setNicknameText(req.query.nickname || "Anonymous")
+          .setSecondText(req.query.secondText || "to the server")
+          .setAvatarImgURL(req.query.avatarImgURL || "https://i.pravatar.cc/150")
+          .setBackgroundColor(req.query.backgroundColor || "#0CA7FF")
+          .setFontDefault(req.query.font || "Nunito");
+        buffer = await card.build();
+        break;
+      }
 
-      buffer = await card.build();
+      case "info": {
+        const card = new InfoCardBuilder()
+          .setMainText(req.query.mainText || "Information")
+          .setBackgroundColor(req.query.backgroundColor || "#0CA7FF");
+        if(req.query.backgroundImgURL) card.setBackgroundImgURL(req.query.backgroundImgURL);
+        buffer = await card.build();
+        break;
+      }
 
-    } else if (type === "base") {
-      const mainText = req.query.mainText || "Welcome";
-      const nickname = req.query.nickname || "Anonymous";
-      const secondText = req.query.secondText || "to the server";
-      const avatarURL = req.query.avatarImgURL || "https://i.pravatar.cc/150";
+      case "welcome": {
+        const card = new WelcomeBuilder({
+          nicknameText: { content: req.query.nickname || "Anonymous" },
+          secondText: { content: req.query.secondText || "Welcome!" },
+          avatarImgURL: req.query.avatarImgURL || "https://i.pravatar.cc/150"
+        });
+        card.setFontDefault(req.query.font || "Nunito");
+        buffer = await card.build();
+        break;
+      }
 
-      const card = new BaseCardBuilder()
-        .setMainText(mainText)
-        .setNicknameText(nickname)
-        .setSecondText(secondText)
-        .setBackgroundColor('#0CA7FF')
-        .setAvatarImgURL(avatarURL)
-        .setAvatarBorderColor('#ffffff');
+      case "leave": {
+        const card = new LeaveBuilder({
+          nicknameText: { content: req.query.nickname || "Anonymous" },
+          avatarImgURL: req.query.avatarImgURL || "https://i.pravatar.cc/150"
+        });
+        card.setSecondText({ content: req.query.secondText || "Goodbye!" });
+        card.setFontDefault(req.query.font || "Nunito");
+        buffer = await card.build();
+        break;
+      }
 
-      buffer = await card.build();
-
-    } else if (type === "info") {
-      const mainText = req.query.mainText || "Information";
-
-      const card = new InfoCardBuilder()
-        .setMainText(mainText)
-        .setBackgroundColor('#0CA7FF');
-
-      buffer = await card.build();
-
-    } else {
-      return res.status(400).send("Invalid type");
+      default:
+        return res.status(400).send("Invalid type");
     }
 
     res.setHeader('Content-Type', 'image/png');
